@@ -8,7 +8,7 @@
 #include <steam/steamnetworkingsockets.h>
 #include <iostream>
 #include <vector>
-#include "constants.h"
+#include "../shared/constants.h"
 
 class NetStuff {
 public:
@@ -16,10 +16,13 @@ public:
     ~NetStuff();
     void poll_messages();
 
-    bool valid;
-    std::string err_reason;
+    mutable bool valid;
+    mutable std::string err_reason;
 
 private:
+    static void on_steam_net_connection_status_changed(SteamNetConnectionStatusChangedCallback_t *info);
+    bool check_and_die(bool cond, const std::string &message) const;
+
     ISteamNetworkingSockets *interface;
     std::vector<HSteamNetConnection> connections;
     HSteamNetPollGroup poll_group;

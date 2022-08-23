@@ -5,7 +5,7 @@
 #include "Game.h"
 #include <iostream>
 #include <SDL_image.h>
-#include "constants.h"
+#include "../shared/constants.h"
 
 Game::Game() : window(nullptr), renderer(nullptr), tileset(nullptr), valid(false), quit(false), previous_tick(0), delta_time(0.0f) {
     window = SDL_CreateWindow("Walkaround MP", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 640, 480, SDL_WINDOW_SHOWN);

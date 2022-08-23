@@ -7,7 +7,7 @@
 
 #include <SDL.h>
 #include <iostream>
-#include "World.h"
+#include "../shared/World.h"
 
 class Game {
 public:

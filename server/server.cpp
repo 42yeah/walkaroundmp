@@ -6,7 +6,7 @@
 #include <thread>
 #include <chrono>
 #include <iostream>
-#include "World.h"
+#include "../shared/World.h"
 #include "NetStuff.h"
 
 int main() {
