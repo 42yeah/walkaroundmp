@@ -7,7 +7,8 @@
 
 #include <SDL.h>
 #include <iostream>
-#include "../shared/World.h"
+#include "World.h"
+#include "MPSession.h"
 
 class Game {
 public:
@@ -26,6 +27,7 @@ public:
         return error;
     }
     void sprite(int id, int x, int y, int w, int h) const;
+    void parse_user_inputs();
 
 private:
     bool test_and_fail(bool cond, const std::string &message) const;
@@ -35,9 +37,15 @@ private:
     SDL_Texture *tileset;
     mutable std::string error;
     World world;
-    std::vector<Thing>::iterator player;
+    Thing *player;
     int previous_tick;
     float delta_time;
+    MPSession mpsession;
+    struct {
+        bool moved{false};
+    } flags;
+
+    friend class MPSession;
 };
 
 #endif //WALKAROUNDMP_GAME_H

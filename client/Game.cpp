@@ -5,9 +5,11 @@
 #include "Game.h"
 #include <iostream>
 #include <SDL_image.h>
-#include "../shared/constants.h"
+#include <steam/isteamnetworkingutils.h>
+#include "constants.h"
 
-Game::Game() : window(nullptr), renderer(nullptr), tileset(nullptr), valid(false), quit(false), previous_tick(0), delta_time(0.0f) {
+Game::Game() : window(nullptr), renderer(nullptr), tileset(nullptr), valid(false), quit(false), previous_tick(0), delta_time(0.0f),
+               mpsession(this), player(nullptr) {
     window = SDL_CreateWindow("Walkaround MP", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 640, 480, SDL_WINDOW_SHOWN);
     if (window == nullptr) {
         error = "Failed to create window?";
@@ -31,9 +33,9 @@ Game::Game() : window(nullptr), renderer(nullptr), tileset(nullptr), valid(false
     SDL_FreeSurface(tileset_surface);
     valid = true;
     // update world to include player himself
-    world.add_thing(Thing(84, 23.0f, 45.0f));
-    world.add_thing(Thing(85, 35.0f, 100.0f));
-    player = world.get_things().begin();
+    world.add_thing(Thing(84, -1, 23.0f, 45.0f));
+    world.add_thing(Thing(85, -1, 35.0f, 100.0f));
+    player = &world.get_things()[0];
     // time related initialization
     previous_tick = SDL_GetTicks();
 }
@@ -59,15 +61,24 @@ void Game::update() {
     // update world according to events
     if (keystate[SDL_SCANCODE_W]) {
         player->y -= player->speed * delta_time;
+        flags.moved = true;
     }
     if (keystate[SDL_SCANCODE_A]) {
         player->x -= player->speed * delta_time;
+        flags.moved = true;
     }
     if (keystate[SDL_SCANCODE_S]) {
         player->y += player->speed * delta_time;
+        flags.moved = true;
     }
     if (keystate[SDL_SCANCODE_D]) {
         player->x += player->speed * delta_time;
+        flags.moved = true;
+    }
+    mpsession.poll_messages();
+    if (mpsession.alive && flags.moved) {
+        flags.moved = false;
+        mpsession.notify_server(*player);
     }
 }
 
@@ -78,7 +89,7 @@ void Game::render() {
     for (const Thing &thing : world.get_things()) {
         // translate the world to player's view
         float px = player->x + player->w / 2.0f, py = player->y + player->h / 2.0f;
-        sprite(thing.id, thing.x - px + winw / 2, thing.y - py + winh / 2, thing.w, thing.h);
+        sprite(thing.sprite_id, thing.x - px + winw / 2, thing.y - py + winh / 2, thing.w, thing.h);
     }
     SDL_RenderPresent(renderer);
 }
@@ -99,4 +110,46 @@ bool Game::test_and_fail(bool cond, const std::string &message) const {
         valid = false;
     }
     return !cond;
+}
+
+void Game::parse_user_inputs() {
+    std::vector<std::string> tokens;
+    tokens.reserve(max_server_command_token_count);
+    while (valid && !quit) {
+        std::string line;
+        std::getline(std::cin, line);
+        if (line.empty()) {
+            break;
+        }
+        tokens.clear();
+        int prev_pos = 0, pos = 0;
+        while ((pos = line.find(" ", pos)) != std::string::npos) {
+            std::string token = line.substr(prev_pos, pos - prev_pos);
+            tokens.push_back(token);
+            prev_pos = ++pos;
+        }
+        tokens.push_back(line.substr(prev_pos));
+        if (!valid || quit) {
+            break;
+        }
+        if (tokens[0] == "quit") {
+            quit = true;
+            break;
+        } else if (tokens[0] == "connect" && tokens.size() == 2) {
+            const std::string &addr = tokens[1];
+            SteamNetworkingIPAddr ip;
+            ip.Clear();
+            ip.ParseString(addr.c_str());
+            mpsession.connect(ip);
+        } else if (tokens[0] == "say") {
+            std::string msg = "";
+            for (int i = 1; i < tokens.size(); i++) {
+                msg += tokens[i] + " ";
+            }
+            msg = msg.substr(0, msg.size() - 1);
+            mpsession.send_message(msg);
+        } else {
+            std::cerr << "?" << std::endl;
+        }
+    }
 }

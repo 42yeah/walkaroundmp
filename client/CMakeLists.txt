@@ -1,4 +1,4 @@
-add_executable(walkaroundmp main.cpp Game.cpp)
+add_executable(walkaroundmp main.cpp Game.cpp MPSession.cpp)
 target_link_libraries(walkaroundmp PUBLIC
         SDL2::SDL2
         SDL2_image::SDL2_image
